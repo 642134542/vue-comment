@@ -11,6 +11,11 @@ const constantRoutes = [
     path: '/home',
     name: 'home',
     component: homePage,
+  },
+  {
+    path: '/canvas',
+    name: 'canvasPage',
+    component: () => import('@/views/canvasPage.vue'),
   }
 ];
 

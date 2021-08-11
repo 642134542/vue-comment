@@ -530,17 +530,24 @@ export default class {
     /** 绘制-矩形 */
     draw_rect() {
         const pos_info = this.get_fix_mouse_info();
-        const left = pos_info.from.x;
-        const top = pos_info.from.y;
-        const to_x = pos_info.to.x;
-        const to_y = pos_info.to.y;
-
+        let left = pos_info.from.x;
+        let top = pos_info.from.y;
+        let to_x = pos_info.to.x;
+        let to_y = pos_info.to.y;
+        if (to_x - left < 0) {
+            left = pos_info.to.x;
+            to_x = pos_info.from.x;
+        }
+        if (to_y - top < 0) {
+            top = pos_info.to.y;
+            to_y = pos_info.from.y;
+        }
         return new fabric.Rect({
             left,
             top,
             fill: TRANSPARENT_COLOR,
-            width: to_x - left,
-            height: to_y - top,
+            width: Math.abs(to_x - left),
+            height: Math.abs(to_y - top),
             stroke: this.brush_color,
             strokeWidth: this.brush_width
         });
@@ -566,12 +573,22 @@ export default class {
     /** 绘制-圆 */
     draw_circle() {
         const pos_info = this.get_fix_mouse_info();
-        const left = pos_info.from.x;
-        const top = pos_info.from.y;
-        const to_x = pos_info.to.x;
-        const to_y = pos_info.to.y;
-        const radius = Math.sqrt((to_x - left) * (to_x - left) + (to_y - top) * (to_y - top)) / 2;
-
+        let left = pos_info.from.x;
+        let top = pos_info.from.y;
+        let to_x = pos_info.to.x;
+        let to_y = pos_info.to.y;
+        if (to_x - left < 0) {
+            left = pos_info.to.x;
+            to_x = pos_info.from.x;
+        }
+        if (to_y - top < 0) {
+            top = pos_info.to.y;
+            to_y = pos_info.from.y;
+        }
+        const xLength = Math.abs(to_x - left);
+        const yLength = Math.abs(to_y - top);
+        const radius = Math.sqrt((xLength * xLength) + (yLength * yLength)) / 2;
+        console.log('draw_circle', xLength, yLength, radius);
         return new fabric.Circle({
             left,
             top,
