@@ -1,20 +1,21 @@
 <template>
-  <div>
-    <div class="vc-image-container canvas-container">
-      <div class="draw_wrapper" ref="draw_wrapper" :style="{height: draw_content_height + 'px'}">
-        <canvas ref="canvas" id="canvasId" :width="canvas_wh.width" :height="canvas_wh.height">你的浏览器不支持 canvas，请升级你的浏览器</canvas>
-      </div>
-    </div>
+  <div class="draw-canvas">
     <div class="tool-bar">
-      <div class="vc-image-tool">
-        <ul class="clearfix">
-          <li class="fl" v-for="(obj, index) in operationList"
-              :key="obj.id">
-            <button class="vc-image--btn"
-                    :title="obj.name" @click="button_clicked(index)">
-              <svg-icon :icon-class="obj.icon"></svg-icon>
-            </button>
-          </li></ul>
+      <ul class="clearfix">
+        <li class="fl" v-for="obj in operationList"
+            :key="obj.id">
+          <button class="vc-image--btn"
+                  :title="obj.name" @click="button_clicked(obj.id)">
+            <svg-icon :icon-class="obj.icon"></svg-icon>
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div class="canvas-main">
+      <div class="draw_wrapper" ref="draw_wrapper" id="drawWrapper">
+        <canvas ref="canvas" id="canvasId"
+                :width="canvas_wh.width"
+                :height="canvas_wh.height">你的浏览器不支持 canvas，请升级你的浏览器</canvas>
       </div>
     </div>
   </div>
@@ -55,42 +56,58 @@ export default {
       imgUrl: '',
       operationList: [
         {
+          id: 100,
+          name: '选择',
+          icon: 'select',
+        },
+        {
           id: 1,
-          name: '箭头',
-          icon: 'path'
+          name: '方框',
+          icon: 'rect',
         },
         {
           id: 2,
-          name: '方框',
-          icon: 'rect'
+          name: '圆形',
+          icon: 'ellipse',
         },
         {
           id: 3,
-          name: '圆形',
-          icon: 'ellipse'
+          name: '箭头',
+          icon: 'arrow',
         },
         {
           id: 4,
-          name: '文本',
-          icon: 'text'
+          name: '画线',
+          icon: 'line',
         },
         {
           id: 5,
-          name: '文本',
-          icon: 'text'
+          name: '画笔',
+          icon: 'pen',
         },
         {
           id: 6,
           name: '文本',
-          icon: 'text'
+          icon: 'text',
+        },
+        {
+          id: 50,
+          name: '撤销',
+          icon: 'undo',
+        },
+        {
+          id: 51,
+          name: '清屏',
+          icon: 'clean',
+        },
+        {
+          id: 52,
+          name: '导出图片',
+          icon: 'clean',
         }
       ],
       img_loading: false,
       drawboard: null,
-      btn_names: [
-      '画框', '画圆', '箭头', '直线', '画笔', '输入',
-      '撤销', '清屏', '正确', '错误', 'A+', 'A-', '旋转',
-    ],
       current_button_index: 4,
     // 颜色
       color: DEFAULT_COLOR,
@@ -104,7 +121,6 @@ export default {
       brush_width: DEFAULT_BRUSH_WIDTH,
       rotate_dialog: false,
       rotate_dialog_checked: false,
-      draw_content_height: 450,
       current_size_mode_is_font: false,
       size_input_val: DEFAULT_BRUSH_WIDTH,
       size_picker_val: DEFAULT_BRUSH_WIDTH,
@@ -113,7 +129,7 @@ export default {
     };
   },
   created() {
-    this.imgUrl = require('@/assets/267.png');
+    this.imgUrl = require('@/assets/234.jpg');
   },
   computed: {
     picker_min_max_size() {
@@ -123,6 +139,16 @@ export default {
 
       return {min: DEFAULT_MIN_BRUSH_WIDTH, max: DEFAULT_MAX_BRUSH_WIDTH};
     },
+  },
+  mounted() {
+    this.draw(this.imgUrl);
+    this.delete_event = this.delete_handler.bind(this);
+    window.addEventListener('keyup', this.delete_event);
+  },
+  destroyed() {
+    window.removeEventListener('keyup', this.delete_event);
+    if (!this.drawboard) { return; }
+    this.drawboard.destroyed();
   },
   methods: {
     init_drawboard() {
@@ -162,10 +188,11 @@ export default {
       this.register_custom_draw_func();
     },
     draw(str) {
-      const win_height = window.screen.height - 400;
-      const win_width = document.body.clientWidth;
+      // const win_height = window.screen.height - 400;
+      // const win_width = document.body.clientWidth;
+      const win_height = document.getElementById('drawWrapper').offsetHeight;
+      const win_width = document.getElementById('drawWrapper').offsetWidth;
       this.canvas_wh = {width: win_width, height: win_height};
-      this.draw_content_height = win_height;
       this.set_img(str);
     },
     /** 设置图片 */
@@ -204,7 +231,7 @@ export default {
         this.init_zoom = zoom;
 
         if (height > this.draw_content_height) {
-          this.canvas_wh.height = height;
+          // this.canvas_wh.height = height;
         }
 
         await this.reset_canvas();
@@ -232,15 +259,15 @@ export default {
     register_custom_draw_func() {
       if (!this.drawboard) { return; }
       // 箭头
-      register_arror_draw(this.btn_names[2], this.drawboard);
+      register_arror_draw('箭头', this.drawboard);
       // 勾
-      register_right_draw(this.btn_names[8], this.drawboard);
+      // register_right_draw(this.btn_names[8], this.drawboard);
       // 叉
-      register_wrong_draw(this.btn_names[9], this.drawboard);
+      // register_wrong_draw(this.btn_names[9], this.drawboard);
       // A+
-      register_aplus_draw(this.btn_names[10], this.drawboard);
+      // register_aplus_draw(this.btn_names[10], this.drawboard);
       // A-
-      register_aminus_draw(this.btn_names[11], this.drawboard);
+      // register_aminus_draw(this.btn_names[11], this.drawboard);
 
     },
     /** 按比例设置线宽和字体大小 */
@@ -283,51 +310,66 @@ export default {
       }
       this.drawboard = null;
     },
+    /* 移动 */
+    change_move_mode() {
+      if (!this.drawboard) { return; }
+      this.in_move_mode = !this.in_move_mode;
+      if (this.in_move_mode) {
+        this.drawboard.enable_select();
+      } else {
+        this.button_clicked(this.current_button_index);
+      }
+    },
     button_clicked(button_index) {
       if (!this.drawboard) { return; }
 
       // 退出移动模式
-      if (this.in_move_mode && ([6, 7].indexOf(button_index) === -1)) {
+      if (this.in_move_mode && ([50, 51].indexOf(button_index) === -1)) {
         this.in_move_mode = false;
       }
-      const status = window.localStorage.getItem(ROTATE_DIALOG_KEY);
       switch (button_index) {
-        case 0: // 画矩形
+        case 100: // 选择
+          this.change_move_mode();
+          this.current_button_index = button_index;
+          break;
+        case 1: // 画矩形
           this.drawboard.set_mode(DrawMode.RECT);
           this.current_button_index = button_index;
           break;
-        case 1: // 画圆
+        case 2: // 画圆
           this.drawboard.set_mode(DrawMode.CIRCLE);
           this.current_button_index = button_index;
           break;
-        case 2: // 画箭头
-          this.drawboard.set_custom_draw_func_enable([this.btn_names[button_index]]);
+        case 3: // 画箭头
+          this.drawboard.set_custom_draw_func_enable(['箭头']);
           this.current_button_index = button_index;
           break;
-        case 3: // 画直线
+        case 4: // 画直线
           this.drawboard.set_mode(DrawMode.LINE);
           this.current_button_index = button_index;
           break;
-        case 4: // 画笔
+        case 5: // 画笔
           this.drawboard.set_mode(DrawMode.PEN);
           this.current_button_index = button_index;
           break;
-        case 5: // 输入文字
+        case 6: // 输入文字
           this.drawboard.set_mode(DrawMode.TEXT);
           this.current_button_index = button_index;
           break;
-        case 6: // 撤销
+        case 50: // 撤销
           this.drawboard.back();
           break;
-        case 7: // 清屏
+        case 51: // 清屏
           this.drawboard.clear();
           this.draw_init_state();
           break;
-        case 8: // 勾
+        case 52:
+          this.drawboard.exportCanvas();
+        /* case 9: // 勾
           this.drawboard.set_custom_draw_func_enable([this.btn_names[button_index]]);
           this.current_button_index = button_index;
           break;
-        case 9: // 叉
+        case 10: // 叉
           this.drawboard.set_custom_draw_func_enable([this.btn_names[button_index]]);
           this.current_button_index = button_index;
           break;
@@ -340,24 +382,15 @@ export default {
           this.current_button_index = button_index;
           break;
         case 12: // 旋转
+        const status = window.localStorage.getItem(ROTATE_DIALOG_KEY);
           if (status === ROTATE_DIALOG_VAL) {
             this.rotate();
           } else {
             this.rotate_dialog = true;
           }
-          break;
+          break;*/
       }
     },
-  },
-  mounted() {
-    this.draw(this.imgUrl);
-    this.delete_event = this.delete_handler.bind(this);
-    window.addEventListener('keyup', this.delete_event);
-  },
-  destroyed() {
-    window.removeEventListener('keyup', this.delete_event);
-    if (!this.drawboard) { return; }
-    this.drawboard.destroyed();
   },
 }
 </script>

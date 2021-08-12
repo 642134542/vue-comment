@@ -11,6 +11,7 @@ import '@/icons' // icon
 
 import './less/home.less';
 import './less/index.less';
+import './less/canvas-draw.less';
 
 new Vue({
   render: h => h(App),

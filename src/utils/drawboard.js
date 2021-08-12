@@ -435,7 +435,15 @@ export default class {
                 // } else if (angle === 270) {
                 //   img.set({ originX: 'right', originY: 'top', angle });
                 // }
-
+                /* const center = this.fCanvas.getCenter();
+                const Shape = new fabric.Image(temp_img, {
+                    // 通过scale来设置图片大小，这里设置和画布一样大
+                    scaleX: this.fCanvas.width / temp_img.width,
+                    scaleY: this.fCanvas.height / temp_img.height,
+                    top: center.top,
+                    left: center.left,
+                });
+                this.fCanvas.setBackgroundImage(Shape, this.fCanvas.renderAll.bind(this.fCanvas)); */
                 this.fCanvas.setBackgroundImage(img, this.fCanvas.renderAll.bind(this.fCanvas));
                 this.fCanvas.requestRenderAll();
 
@@ -767,6 +775,22 @@ export default class {
         }
 
         return true;
+    }
+    /* 导出 */
+    exportCanvas(){
+        const dataURL = this.fCanvas.toDataURL({
+            width: this.fCanvas.width,
+            height: this.fCanvas.height,
+            left: 0,
+            top: 0,
+            format: 'png',
+        });
+        const link = document.createElement('a');
+        link.download = 'canvas.png';
+        link.href = dataURL;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
 }
