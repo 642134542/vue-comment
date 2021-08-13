@@ -596,7 +596,6 @@ export default class {
         const xLength = Math.abs(to_x - left);
         const yLength = Math.abs(to_y - top);
         const radius = Math.sqrt((xLength * xLength) + (yLength * yLength)) / 2;
-        console.log('draw_circle', xLength, yLength, radius);
         return new fabric.Circle({
             left,
             top,
@@ -777,7 +776,7 @@ export default class {
         return true;
     }
     /* 导出 */
-    exportCanvas(){
+    exportCanvas() {
         const dataURL = this.fCanvas.toDataURL({
             width: this.fCanvas.width,
             height: this.fCanvas.height,
@@ -791,6 +790,19 @@ export default class {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    }
+    // 导出的Json
+    exportToJson() {
+        const currState = this.fCanvas.toJSON(); // 导出的Json如下图
+        return new Promise((resolve) => {
+            resolve(currState);
+        }).catch()
+    }
+
+    initJson(data) {
+        this.fCanvas.loadFromJSON(data, () => {
+            this.fCanvas.renderAll();
+        });
     }
 
 }

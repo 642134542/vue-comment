@@ -2,9 +2,9 @@
   <div class="draw-canvas">
     <div class="tool-bar">
       <ul class="clearfix">
-        <li class="fl" v-for="obj in operationList"
+        <li class="fl d-btn-item" v-for="obj in operationList"
             :key="obj.id">
-          <button class="vc-image--btn"
+          <button class="cd-image--btn" :class="{ 'is-active': obj.id === current_button_index }"
                   :title="obj.name" @click="button_clicked(obj.id)">
             <svg-icon :icon-class="obj.icon"></svg-icon>
           </button>
@@ -12,6 +12,25 @@
       </ul>
     </div>
     <div class="canvas-main">
+      <div class="cd-draw-select">
+        <div class="picker_item color_picker">
+          <span class="picker_title">颜色:</span>
+          <el-color-picker title="选择颜色" v-model="color" size="mini" />
+        </div>
+
+        <div class="picker_item size_picker">
+          <span class="picker_title">笔触:</span>
+          <el-input class="picker_input" v-model="size_input_val" size="mini">
+            <el-button slot="append" :icon="!show_picker_slider ? 'el-icon-arrow-down' : 'el-icon-arrow-up'"
+                       @click.stop="show_picker_slider = !show_picker_slider" />
+          </el-input>
+          <div class="picker_slider" v-show="show_picker_slider">
+            <el-slider input-size="mini" :show-tooltip="false" v-model="size_picker_val"
+                       :max="picker_min_max_size.max"
+                       :min="picker_min_max_size.min" />
+          </div>
+        </div>
+      </div>
       <div class="draw_wrapper" ref="draw_wrapper" id="drawWrapper">
         <canvas ref="canvas" id="canvasId"
                 :width="canvas_wh.width"
@@ -22,6 +41,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import Drawboard, { DrawMode } from '../utils/drawboard';
 import {
   register_arror_draw,
@@ -32,7 +52,7 @@ import {
 } from '../utils/custom';
 import { get_image_natural_wh } from '../utils/common';
 
-const DEFAULT_MODE = 4; // 默认画笔模式
+const DEFAULT_MODE = 100; // 默认画笔模式
 const DEFAULT_ANGLE = 0; // 默认旋转角度
 const DEFAULT_ZOOM = 100; // 默认缩放比例
 const DEFAULT_COLOR = '#FF0000'; // 默认颜色
@@ -40,7 +60,7 @@ const DEFAULT_COLOR = '#FF0000'; // 默认颜色
 // 字体大小
 const DEFAULT_FONT_SIZE = 16; // 默认字体大小
 const DEFAULT_MAX_FONT_SIZE = 128;
-const DEFAULT_MIN_FONT_SIZE = 32;
+const DEFAULT_MIN_FONT_SIZE = 16;
 
 // 线宽大小
 const DEFAULT_BRUSH_WIDTH = 4;
@@ -51,6 +71,12 @@ const ROTATE_DIALOG_KEY = 'noshowdrawrotatedialog';
 const ROTATE_DIALOG_VAL = '1';
 export default {
   name: 'canvasPage',
+  props: {
+    isNew: {
+      type: Boolean,
+      default: false,
+    }
+  },
   data() {
     return {
       imgUrl: '',
@@ -91,6 +117,11 @@ export default {
           icon: 'text',
         },
         {
+          id: 7,
+          name: '删除',
+          icon: 'delete',
+        },
+        {
           id: 50,
           name: '撤销',
           icon: 'undo',
@@ -103,12 +134,17 @@ export default {
         {
           id: 52,
           name: '导出图片',
-          icon: 'clean',
+          icon: 'exportImg',
+        },
+        {
+          id: 53,
+          name: '导出json',
+          icon: 'exportJson',
         }
       ],
       img_loading: false,
       drawboard: null,
-      current_button_index: 4,
+      current_button_index: 100,
     // 颜色
       color: DEFAULT_COLOR,
     // 处于移动模式
@@ -126,22 +162,83 @@ export default {
       size_picker_val: DEFAULT_BRUSH_WIDTH,
       show_picker_slider: false,
       init_state: { is_img: false, img_check: true, data: '' },
+
     };
   },
   created() {
     this.imgUrl = require('@/assets/234.jpg');
+  },
+  watch: {
+    color: {
+      handler() {
+        if (!this.drawboard) { return; }
+
+        this.drawboard.set_brush({color: this.color, width: this.brush_width});
+      },
+    },
+    brush_width: {
+      handler() {
+        if (!this.drawboard) { return; }
+        this.set_zoom_size();
+      },
+    },
+    font_size: {
+      handler() {
+        if (!this.drawboard) { return; }
+        this.set_zoom_size();
+      },
+    },
+    size_input_val: {
+      handler() {
+        this.size_picker_val= Number(this.size_input_val);
+      },
+    },
+    size_picker_val: {
+      handler() {
+        this.size_input_val = this.size_picker_val;
+
+        if (this.current_size_mode_is_font) {
+          this.font_size = this.size_picker_val;
+        } else {
+          this.brush_width = this.size_picker_val;
+        }
+      },
+    },
+    current_button_index: {
+      handler() {
+        this.current_size_mode_is_font = [6].indexOf(this.current_button_index) !== -1;
+      },
+    },
+    current_size_mode_is_font: {
+      handler(val) {
+        this.size_input_val = val ? this.font_size : this.brush_width;
+      },
+    },
   },
   computed: {
     picker_min_max_size() {
       if (this.current_size_mode_is_font) {
         return {min: DEFAULT_MIN_FONT_SIZE, max: DEFAULT_MAX_FONT_SIZE};
       }
-
       return {min: DEFAULT_MIN_BRUSH_WIDTH, max: DEFAULT_MAX_BRUSH_WIDTH};
     },
   },
   mounted() {
-    this.draw(this.imgUrl);
+    if (this.isNew) {
+      this.draw(this.imgUrl);
+    } else {
+      const win_height = document.getElementById('drawWrapper').offsetHeight;
+      const win_width = document.getElementById('drawWrapper').offsetWidth;
+      this.canvas_wh = { width: win_width, height: win_height };
+      axios({
+        method: 'get',
+        url: 'draw.json',
+      }).then((res) => {
+        // 加载画布信息
+        this.initDataCanvas(res.data);
+      }, () => {
+      });
+    }
     this.delete_event = this.delete_handler.bind(this);
     window.addEventListener('keyup', this.delete_event);
   },
@@ -151,7 +248,13 @@ export default {
     this.drawboard.destroyed();
   },
   methods: {
-    init_drawboard() {
+    /* 有数据的时候初始化画布 */
+    initDataCanvas(data) {
+      console.log('data', data);
+      this.destroy_drawboard();
+      this.init_drawboard(true, data)
+    },
+    init_drawboard(isLoad = false, data) {
       if (this.drawboard) {
         return;
       }
@@ -173,8 +276,7 @@ export default {
         },
         zoom_change: (zoom) => {
           const scale = zoom / this.init_zoom;
-          const z = parseInt(`${scale * 100}`, 10);
-          this.zoom = z;
+          this.zoom = parseInt(`${scale * 100}`, 10);
           this.set_zoom_size();
         },
         drag_event: (status) => {
@@ -186,10 +288,21 @@ export default {
       console.log('this.drawboard', this.drawboard)
       this.current_button_index = DEFAULT_MODE;
       this.register_custom_draw_func();
+      if (isLoad) {
+        let zoom = 1;
+        const { width } = data.backgroundImage;
+        if (width > this.canvas_wh.width) {
+          zoom = this.canvas_wh.width / width;
+        }
+        this.init_zoom = zoom;
+        // this.font_size = this.font_size / zoom;
+        this.drawboard.set_min_zoom(0.2 * zoom);
+        this.drawboard.set_max_zoom(3 * zoom);
+        this.drawboard.set_zoom(zoom);
+        this.drawboard.initJson(data)
+      }
     },
     draw(str) {
-      // const win_height = window.screen.height - 400;
-      // const win_width = document.body.clientWidth;
       const win_height = document.getElementById('drawWrapper').offsetHeight;
       const win_width = document.getElementById('drawWrapper').offsetWidth;
       this.canvas_wh = {width: win_width, height: win_height};
@@ -240,6 +353,7 @@ export default {
           return;
         }
         if (this.drawboard) {
+          // this.font_size = this.font_size / zoom;
           this.drawboard.set_bg_img({ src: img_src, angle, catch: set_error_img, finish });
           this.drawboard.set_min_zoom(0.2 * zoom);
           this.drawboard.set_max_zoom(3 * zoom);
@@ -289,7 +403,6 @@ export default {
     delete_handler(ev) {
       ev.preventDefault();
       ev.stopPropagation();
-      if (!this.show) { return; }
       // DEL 删除按钮
       if (ev.keyCode !== 46) { return; }
       this.delete_selected();
@@ -356,6 +469,9 @@ export default {
           this.drawboard.set_mode(DrawMode.TEXT);
           this.current_button_index = button_index;
           break;
+        case 7: // 删除
+          this.delete_selected();
+          break;
         case 50: // 撤销
           this.drawboard.back();
           break;
@@ -365,6 +481,11 @@ export default {
           break;
         case 52:
           this.drawboard.exportCanvas();
+          break;
+        case 53:
+          this.exportToJson();
+          break;
+
         /* case 9: // 勾
           this.drawboard.set_custom_draw_func_enable([this.btn_names[button_index]]);
           this.current_button_index = button_index;
@@ -390,6 +511,11 @@ export default {
           }
           break;*/
       }
+    },
+    exportToJson() {
+      this.drawboard.exportToJson().then((res) => {
+        console.log(JSON.stringify(res));
+      });
     },
   },
 }
