@@ -74,7 +74,7 @@ export default {
   props: {
     isNew: {
       type: Boolean,
-      default: false,
+      default: true,
     }
   },
   data() {
@@ -271,6 +271,7 @@ export default {
         back_event: (history) => {
           if (!history.length) {
             this.$message.warning('没有可撤销的记录了');
+            this.destroy_drawboard();
             this.draw_init_state();
           }
         },
@@ -300,6 +301,9 @@ export default {
         this.drawboard.set_max_zoom(3 * zoom);
         this.drawboard.set_zoom(zoom);
         this.drawboard.initJson(data)
+        this.init_state.is_img = true;
+        this.init_state.img_check = true;
+        this.init_state.data = data.backgroundImage.src;
       }
     },
     draw(str) {
@@ -394,9 +398,7 @@ export default {
     },
     draw_init_state() {
       if (this.init_state.is_img) {
-        // this.set_img(this.init_state.data, this.rotate_angle, this.init_state.img_check);
-      } else {
-        // this.set_text(this.init_state.data, this.rotate_angle);
+        this.set_img(this.init_state.data, this.rotate_angle, this.init_state.img_check);
       }
     },
     /** 键盘事件-删除 */
