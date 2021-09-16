@@ -58,7 +58,7 @@ const DEFAULT_ZOOM = 100; // 默认缩放比例
 const DEFAULT_COLOR = '#FF0000'; // 默认颜色
 
 // 字体大小
-const DEFAULT_FONT_SIZE = 16; // 默认字体大小
+const DEFAULT_FONT_SIZE = 32; // 默认字体大小
 const DEFAULT_MAX_FONT_SIZE = 128;
 const DEFAULT_MIN_FONT_SIZE = 16;
 
@@ -74,7 +74,7 @@ export default {
   props: {
     isNew: {
       type: Boolean,
-      default: true,
+      default: false,
     }
   },
   data() {
@@ -167,6 +167,7 @@ export default {
   },
   created() {
     this.imgUrl = require('@/assets/234.jpg');
+    // this.imgUrl = 'http://192.168.0.27:8088/group1/2021/08/25/5wy9v1.jpg';
   },
   watch: {
     color: {
@@ -227,15 +228,40 @@ export default {
     if (this.isNew) {
       this.draw(this.imgUrl);
     } else {
-      const win_height = document.getElementById('drawWrapper').offsetHeight;
-      const win_width = document.getElementById('drawWrapper').offsetWidth;
+      const box = document.getElementById('drawWrapper');
+      const win_height = box.offsetHeight;
+      const win_width = box.offsetWidth;
       this.canvas_wh = { width: win_width, height: win_height };
       axios({
         method: 'get',
         url: 'draw.json',
       }).then((res) => {
         // 加载画布信息
-        this.initDataCanvas(res.data);
+        this.destroy_drawboard();
+        get_image_natural_wh(res.data.backgroundImage.src).then((res2) => {
+          const { naturalWidth, naturalHeight } = res2;
+          const aspectRatio = naturalWidth / naturalHeight;
+          let boxWidth = this.canvas_wh.width;
+          let boxHeight = this.canvas_wh.height;
+
+          if (this.canvas_wh.height * aspectRatio > this.canvas_wh.width) {
+            boxHeight = this.canvas_wh.width / aspectRatio;
+          } else {
+            boxWidth = this.canvas_wh.height * aspectRatio;
+          }
+
+          boxWidth = Math.min(boxWidth, naturalWidth);
+          boxHeight = Math.min(boxHeight, naturalHeight);
+          document.getElementById('canvasId').width = boxWidth
+          document.getElementById('canvasId').height = boxHeight
+          let zoom = 1;
+          if (naturalWidth > this.canvas_wh.width) {
+            zoom = boxWidth / naturalWidth;
+          }
+          this.init_zoom = zoom;
+          this.init_drawboard(true, res.data);
+          // this.font_size = this.font_size / zoom;
+        })
       }, () => {
       });
     }
@@ -290,16 +316,9 @@ export default {
       this.current_button_index = DEFAULT_MODE;
       this.register_custom_draw_func();
       if (isLoad) {
-        let zoom = 1;
-        const { width } = data.backgroundImage;
-        if (width > this.canvas_wh.width) {
-          zoom = this.canvas_wh.width / width;
-        }
-        this.init_zoom = zoom;
-        // this.font_size = this.font_size / zoom;
-        this.drawboard.set_min_zoom(0.2 * zoom);
-        this.drawboard.set_max_zoom(3 * zoom);
-        this.drawboard.set_zoom(zoom);
+        this.drawboard.set_min_zoom(0.2 * this.init_zoom);
+        this.drawboard.set_max_zoom(3 * this.init_zoom);
+        this.drawboard.set_zoom(this.init_zoom);
         this.drawboard.initJson(data)
         this.init_state.is_img = true;
         this.init_state.img_check = true;
@@ -307,8 +326,9 @@ export default {
       }
     },
     draw(str) {
-      const win_height = document.getElementById('drawWrapper').offsetHeight;
-      const win_width = document.getElementById('drawWrapper').offsetWidth;
+      const box = document.getElementById('drawWrapper');
+      const win_height = box.offsetHeight;
+      const win_width = box.offsetWidth;
       this.canvas_wh = {width: win_width, height: win_height};
       this.set_img(str);
     },
@@ -326,30 +346,37 @@ export default {
       const finish = () => { this.img_loading = false; };
 
       try {
-        let { width, height } = await get_image_natural_wh(img_src);
-        if (width < this.canvas_wh.width) {
-          width = this.canvas_wh.width;
-        }
-        if (height < this.canvas_wh.height) {
-          height = this.canvas_wh.height;
+        let { naturalWidth, naturalHeight } = await get_image_natural_wh(img_src);
+        console.log('naturalWidth, naturalHeight', naturalWidth, naturalHeight)
+        const aspectRatio = naturalWidth / naturalHeight;
+        let boxWidth = this.canvas_wh.width;
+        let boxHeight = this.canvas_wh.height;
+
+
+        if (this.canvas_wh.height * aspectRatio > this.canvas_wh.width) {
+          boxHeight = this.canvas_wh.width / aspectRatio;
+        } else {
+          boxWidth = this.canvas_wh.height * aspectRatio;
         }
 
+        boxWidth = Math.min(boxWidth, naturalWidth);
+        boxHeight = Math.min(boxHeight, naturalHeight);
+        document.getElementById('canvasId').width = boxWidth
+        document.getElementById('canvasId').height = boxHeight
+
+
         if (angle === 90 || angle === 270) {
-          const tempw = width;
-          width = height;
-          height = tempw;
+          const tempw = naturalWidth;
+          naturalWidth = naturalHeight;
+          naturalHeight = tempw;
         }
 
         let zoom = 1;
-        if (width > this.canvas_wh.width) {
-          zoom = this.canvas_wh.width / width;
-          height = height * zoom;
+        if (naturalWidth > this.canvas_wh.width) {
+          zoom = boxWidth / naturalWidth;
+          // naturalHeight = naturalHeight * zoom;
         }
         this.init_zoom = zoom;
-
-        if (height > this.draw_content_height) {
-          // this.canvas_wh.height = height;
-        }
 
         await this.reset_canvas();
         if (!this.drawboard) {

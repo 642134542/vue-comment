@@ -14,10 +14,10 @@ export function get_image_natural_wh(url) {
 
     img.src = url;
     img.onload = () => {
-      return resolve({ width: img.width, height: img.height });
+      return resolve({ naturalWidth: img.width, naturalHeight: img.height });
     };
     img.onerror = () => {
-      return resolve({ width: 0, height: 0 });
+      return resolve({ naturalWidth: 0, naturalHeight: 0 });
     };
   });
 }

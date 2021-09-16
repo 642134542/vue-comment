@@ -5,7 +5,7 @@ import homePage from '@/views/homePage.vue';
 const constantRoutes = [
   {
     path: '/',
-    redirect: { name: 'home' },
+    redirect: { name: 'canvasPage' },
   },
   {
     path: '/home',
